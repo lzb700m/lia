@@ -1,5 +1,6 @@
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.ListIterator;
 
 /**
  * Immutable class LargeInteger represent arbitrary large integer numbers
@@ -46,37 +47,37 @@ public class LargeInteger implements Comparable<LargeInteger> {
         this.sign = 1;
         if (str.charAt(0) == '+') {
             this.sign = 1;
-            str.substring(1);
+            str = str.substring(1);
         } else if (str.charAt(0) == '-') {
             this.sign = -1;
-            str.substring(1);
+            str = str.substring(1);
         }
         for (int i = 0; i < str.length(); i++) {
             // invalid string
             if (!Character.isDigit(str.charAt(0))) {
-                this.sign = 1;
-                this.digits.clear();
+                this.sign = 0;
+                this.digits = new LinkedList<Long>();
                 return;
             }
             this.digits.add(0, Long.valueOf(str.charAt(i) - '0'));
         }
-        this.convert(b);
+        this.convert(MASK + 1);
     }
 
     public LargeInteger(String str) {
         this(str, DEFAULT_BASE);
     }
 
+    private static int MASK = 0x7fffffff;
+
     /* TODO Constructor taking long as argument. Constructor for XYZ class. */
     public LargeInteger(Long num, int b) {
-        this.base = 10;
+        this.base = b;
         this.sign = num == 0 ? 0 : (num > 0 ? 1 : -1);
         while (num > 0) {
-            int r = (int) (num % 10);
-            this.digits.add(Long.valueOf(r));
-            num /= 10;
+            this.digits.add(Long.valueOf(num & MASK));
+            num = num >>> 31;
         }
-        this.convert(b);
     }
 
     public LargeInteger(Long num) {
@@ -114,33 +115,22 @@ public class LargeInteger implements Comparable<LargeInteger> {
      */
     @Override
     public String toString() {
-        LargeInteger num = this;
-        if (num.sign == 0) return "0";
-        if (this.base != 10) {
-            num = convert(this, 10);
-        }
-
-        StringBuilder sb = new StringBuilder(num.digits.size());
-        if (num.sign < 0) sb.append("-");
-        Iterator<Long> iter = num.digits.descendingIterator();
-        Long first = getNext(iter);
-        while (first == 0L) {
-            iter.remove();
-            first = getNext(iter);
-        }
-        sb.append(first);
-        while (iter.hasNext())
-            sb.append(iter.next());
-        return sb.toString();
+        if (this.sign == 0) return "0";
+        String res = stringWithBase(10, "").reverse().toString();
+        if (this.sign < 0) return "-" + res;
+        return res;
     }
 
     /*
-     * TODO Print the base + ":" + elements of the list, separated by spaces.
-     */
+ * TODO Print the base + ":" + elements of the list, separated by spaces.
+ */
     public void printList() {
-
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.base);
+        sb.append(":");
+        sb.append(stringWithBase(this.base, " ").toString());
+        System.out.println(sb.toString());
     }
-
 
 
     private static Long getNext(Iterator<Long> iter) {
@@ -148,7 +138,6 @@ public class LargeInteger implements Comparable<LargeInteger> {
     }
 
     /**
-     *
      * Basic operation of addition or substraction; if it is minus, ths abs(num1) should
      * always larger than abs(num2)
      *
@@ -179,16 +168,9 @@ public class LargeInteger implements Comparable<LargeInteger> {
                 n2 = getNext(iter_2);
             }
             temp += carry;
-            if (temp >= num1.base) {
-                carry = 1L;
-                temp -= num1.base;
-            } else if (temp < 0) {
-                carry = -1L;
-                temp += num1.base;
-            } else {
-                carry = 0L;
-            }
-            result.digits.add(temp);
+            carry = temp >> 31;
+
+            result.digits.add(temp & MASK);
         }
         if (carry != 0) {
             result.digits.add(carry);
@@ -200,24 +182,25 @@ public class LargeInteger implements Comparable<LargeInteger> {
 
     private static LargeInteger add(LargeInteger num1, LargeInteger num2, boolean flag) {
         if ((num1.sign == num2.sign) == flag) {
+            // same sign addition or different sign substract
+            // just use add
             LargeInteger result = addition(num1, num2, true);
             result.sign = num1.sign;
             return result;
-        }
-        else {
+        } else {
+            // substract
             int cmp = num1.compareWithoutSign(num2);
             LargeInteger result;
             if (cmp > 0) {
                 result = addition(num1, num2, false);
                 result.sign = num1.sign;
                 return result;
-            }
-            else if (cmp < 0){
+            } else if (cmp < 0) {
+                // exchange num2 and num1 then sign should be reversed
                 result = addition(num2, num1, false);
-                result.sign = num2.sign;
+                result.sign = -num2.sign;
                 return result;
-            }
-            else {
+            } else {
                 return new LargeInteger(num1.base);
             }
         }
@@ -242,7 +225,6 @@ public class LargeInteger implements Comparable<LargeInteger> {
     }
 
 
-
     /**
      * get remainder for each iteration
      * remainder is no larger than base
@@ -253,16 +235,26 @@ public class LargeInteger implements Comparable<LargeInteger> {
      */
     public static Long getRemainder(LargeInteger num, int targetBase) {
         Long temp = 0L;
-        int curBase = num.base;
         LargeInteger tempNum = new LargeInteger(num);
+        int curBase = num.base;
         Iterator<Long> iter = tempNum.digits.descendingIterator();
-        tempNum.digits.clear();
+        num.digits.clear();
         while (iter.hasNext()) {
             Long cur = iter.next();
-            temp = temp * curBase + cur;
-            Long val = temp / targetBase;
-            temp = temp % targetBase;
-            tempNum.digits.add(0, val);
+            if (curBase == MASK + 1) {
+                temp = (temp << 31) + cur;
+            } else {
+                temp = temp * curBase + cur;
+            }
+            Long val;
+            if (targetBase == MASK + 1) {
+                val = temp >>> 31;
+                temp = temp & MASK;
+            } else {
+                val = temp / targetBase;
+                temp = temp % targetBase;
+            }
+            num.digits.add(0, val);
         }
         iter = num.digits.descendingIterator();
         while (iter.hasNext()) {
@@ -273,18 +265,28 @@ public class LargeInteger implements Comparable<LargeInteger> {
         return temp;
     }
 
+    private StringBuilder stringWithBase(int targetBase, String seperator) {
+        LargeInteger temp = new LargeInteger(this);
+        temp.base = MASK + 1;
+        StringBuilder sb = new StringBuilder();
+        while (!temp.digits.isEmpty()) {
+            sb.append(seperator);
+            sb.append(getRemainder(temp, targetBase));
+        }
+        return sb;
+    }
+
     /**
      * Converting current largeInteger instance into a new LargeInteger instance with given targetBase,
      *
      * @param targetBase
      */
     private void convert(int targetBase) {
-        if (this.base == targetBase) return;
         LargeInteger temp = new LargeInteger(this);
-        this.base = targetBase;
         this.digits.clear();
         while (!temp.digits.isEmpty()) {
-            this.digits.add(getRemainder(temp, targetBase));
+            Long n = getRemainder(temp, targetBase);
+            this.digits.add(n);
         }
     }
 
@@ -297,12 +299,13 @@ public class LargeInteger implements Comparable<LargeInteger> {
      */
     public static LargeInteger convert(LargeInteger LargeInteger, int targetBase) {
         LargeInteger temp = new LargeInteger(LargeInteger);
-        temp.convert(targetBase);
+        temp.base = targetBase;
         return temp;
     }
 
     /**
      * Initialize a zero LargeInteger instance with given base.
+     *
      * @param base
      */
     public LargeInteger(int base) {
@@ -322,22 +325,165 @@ public class LargeInteger implements Comparable<LargeInteger> {
             this.digits.add(num.digits.get(i));
         }
     }
-    
+
     /*
-     * TODO product of two numbers.
-     */
+    * TODO product of two numbers.
+    */
     public static LargeInteger product(LargeInteger a, LargeInteger b) {
-        return null;
+        if (a.base != b.base) return null;
+        if (a.sign == 0 || b.sign == 0) {
+            return new LargeInteger(a.base);
+        }
+        LargeInteger result = multi(a, b);
+        result.sign = a.sign != b.sign ? -1 : 1;
+        return result;
     }
 
+    private void shift(int n) {
+        for (int i = 0; i < n; i++)
+            this.digits.addFirst(0L);
+    }
+
+    private static LargeInteger multi(LargeInteger a, LargeInteger b) {
+        LargeInteger result = new LargeInteger(a.base);
+        ListIterator<Long> iter_a = a.digits.listIterator();
+        Long carry = 0L;
+        while (iter_a.hasNext()) {
+            ListIterator<Long> iter_b = b.digits.listIterator();
+            Long cur_a = iter_a.next();
+            int idx = iter_a.nextIndex() - 1;
+            ListIterator<Long> res_iter = result.digits.listIterator(idx);
+            while (iter_b.hasNext()) {
+                Long cur = iter_b.next();
+                if (res_iter.hasNext()) {
+                    cur = cur * cur_a + res_iter.next() + carry;
+                    res_iter.set(cur & MASK);
+                } else {
+                    cur = cur * cur_a + carry;
+                    res_iter.add(cur & MASK);
+                }
+                carry = cur >>> 31;
+            }
+            while (carry > 0) {
+                result.digits.add(carry & MASK);
+                carry = carry >>> 31;
+            }
+        }
+        return result;
+    }
+
+    public int length() {
+        return this.digits.size();
+    }
+
+    private static LargeInteger[] split(LargeInteger a, int index) {
+        LargeInteger a1 = new LargeInteger(a.base);
+        a1.digits.addAll(a.digits.subList(0, index)); //lower part
+        a1.sign = a.sign;
+        LargeInteger a2 = new LargeInteger(a.base);
+        a2.digits.addAll(a.digits.subList(index, a.digits.size())); // higher part
+        a2.sign = a.sign;
+        return new LargeInteger[]{a1, a2};
+    }
+
+//    private static LargeInteger multi(LargeInteger a, LargeInteger b) {
+//        if (a.length() == 0 || b.length() == 0) return new LargeInteger(a.base);
+//        if (a.length() == 1 && b.length() == 1) {
+//            Long r = a.digits.iterator().next() * b.digits.iterator().next();
+//            LargeInteger result = new LargeInteger(a.base);
+//            result.digits.add(r % a.base);
+//            if (r / a.base > 0) result.digits.add(r / a.base);
+//            return result;
+//        }
+//        int idx = (Math.max(a.length(), b.length()) + 1) / 2;
+//        LargeInteger A[] = split(a, idx);
+//        LargeInteger B[] = split(b, idx);
+//        // least significant is part placed in index 0, hight part is placed in index 1
+//        LargeInteger a1b1 = multi(A[1], B[1]); // higher part multiplication
+//        LargeInteger a2b2 = multi(A[0], B[0]); // lower part multiplication
+//        LargeInteger a1b1_add = add(A[1], A[0]);
+//        LargeInteger a2b2_add = add(B[1], B[0]);
+//        LargeInteger ab = multi(a1b1_add, a2b2_add);
+//        LargeInteger result = subtract(subtract(ab, a1b1), a2b2);
+//        a1b1.shift(2 * idx);
+//        result.shift(idx);
+//        return add(add(result, a1b1), a2b2);
+//    }
+
+    public static final LargeInteger ZERO = new LargeInteger(10);
+
+    public static final LargeInteger ONE = new LargeInteger(1L, 10);
+
+    public static final LargeInteger TWO = new LargeInteger(2L, 10);
     /*
      * TODO Divide a by b result. Fractional part is discarded (take just the
      * quotient). Both a and b may be positive or negative. If b is 0, raise an
      * exception.
      */
-    public static LargeInteger divide(LargeInteger a, LargeInteger b) {
-        return null;
+    public static LargeInteger[] div(LargeInteger a, LargeInteger b) {
+
+        LargeInteger quotient = new LargeInteger(a.base);
+        quotient.sign = 1;
+        LargeInteger temp_a = a;
+        while (temp_a.compareTo(b) >= 0) {
+            LargeInteger tempQuotient = ONE;
+            LargeInteger temp_b = b;
+            while (temp_a.compareWithoutSign(temp_b) >= 0) {
+                temp_a = add(temp_a, temp_b, temp_a.sign != temp_b.sign);
+                quotient = add(quotient, tempQuotient, quotient.sign == tempQuotient.sign);
+                tempQuotient = add(tempQuotient, tempQuotient);
+                temp_b = add(temp_b, temp_b);
+            }
+        }
+        return new LargeInteger[] {quotient, temp_a};
     }
+
+    private LargeInteger getHighPart(int digits) {
+        return getPart(0, digits);
+    }
+
+    /**
+     *
+     * @param fromHight  high is most significant digits, parameter from 0...length
+     * @param toLow     low is least significant digits, from 0...length, should be higher than fromHight
+     * @return new large integer contains the number from high to low.
+     */
+    private LargeInteger getPart(int fromHight, int toLow) {
+        LargeInteger r = new LargeInteger(this.base);
+        r.sign = this.sign;
+        r.digits.addAll(this.digits.subList(this.length() - toLow - 1 , this.length() - fromHight));
+        return r;
+    }
+
+//    public static LargeInteger divide(LargeInteger a, LargeInteger b) {
+//        if (b.sign == 0) throw new ArithmeticException("Division by zero");
+//        if (a.sign == 0) return ZERO;
+//        if (b.compareWithoutSign(ONE) == 0) {
+//            LargeInteger r = new LargeInteger(a);
+//            r.sign = a.sign == b.sign ? 1 : -1;
+//            return r;
+//        }
+//        int i = b.length();
+//        LargeInteger quotient = new LargeInteger(a.base);
+//        LargeInteger part = a.getHighPart(b.length());
+//        int curQuo = 0, curRem = 0;
+//        for (; i < a.length(); i += 1) {
+//            int cmp = part.compareWithoutSign(b);
+//            if (cmp == 0) {
+//                curRem = 0;
+//                curQuo *= 10;
+//            }
+//            else if (cmp < 0) {
+//                i += 1;
+//                Long nextNum = a.digits.get(a.length() - i - b.length());
+//                part.digits.add(0, nextNum);
+//            }
+//            else {
+//                LargeInteger [] division = div(part, b);
+//                quotient = add(quotient, division[0]);
+//            }
+//        }
+//    }
 
     /*
      * TODO remainder you get when a is divided by b (a%b). Assume that a is
