@@ -104,7 +104,7 @@ public class LargeInteger implements Comparable<LargeInteger> {
         }
     }
 
-    public int compareWithoutSign(LargeInteger o) {
+    private int compareWithoutSign(LargeInteger o) {
         if (this.digits.size() != o.digits.size()) return this.digits.size() - o.digits.size();
         Iterator<Long> iter1 = this.digits.descendingIterator();
         Iterator<Long> iter2 = o.digits.descendingIterator();
@@ -240,7 +240,7 @@ public class LargeInteger implements Comparable<LargeInteger> {
      * @param targetBase
      * @return remainder for current num divided by target base
      */
-    public static Long getRemainder(LargeInteger num, int targetBase) {
+    private static Long getRemainder(LargeInteger num, int targetBase) {
         Long temp = 0L;
         LargeInteger tempNum = new LargeInteger(num);
         long curBase = num.base;
@@ -288,7 +288,7 @@ public class LargeInteger implements Comparable<LargeInteger> {
      *
      * @param targetBase
      */
-    private void convert(int targetBase) {
+    public void convert(int targetBase) {
         LargeInteger temp = new LargeInteger(this);
         temp.base = DEFAULT_BASE;
         this.digits.clear();
@@ -433,7 +433,7 @@ public class LargeInteger implements Comparable<LargeInteger> {
      * quotient). Both a and b may be positive or negative. If b is 0, raise an
      * exception.
      */
-    public static LargeInteger[] div(LargeInteger a, LargeInteger b) {
+    private static LargeInteger[] div(LargeInteger a, LargeInteger b) {
         LargeInteger quotient = new LargeInteger(a.base);
         quotient.sign = 1;
         LargeInteger temp_a = a;
