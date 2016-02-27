@@ -41,7 +41,14 @@ public class LargeInteger implements Comparable<LargeInteger> {
      */
     public LargeInteger(String str, int b) {
         this(b);
+
+        // empty string considered as 0
         if (str.length() == 0) {
+            return;
+        }
+
+        // "0" string
+        if (str.length() == 1 && str.charAt(0) - '0' == 0) {
             return;
         }
         this.sign = 1;
@@ -155,7 +162,7 @@ public class LargeInteger implements Comparable<LargeInteger> {
         Long carry = 0L;
         Long n1 = getNext(iter_1), n2 = getNext(iter_2);
         while (n1 != null || n2 != null) {
-            Long temp = 0L;
+            Long temp;
             if (n1 == null) {
                 temp = sign * n2;
                 n2 = getNext(iter_2);
@@ -339,9 +346,14 @@ public class LargeInteger implements Comparable<LargeInteger> {
         return result;
     }
 
-    private void shift(int n) {
+    private void shiftToBigger(int n) {
         for (int i = 0; i < n; i++)
             this.digits.addFirst(0L);
+    }
+
+    private void shiftToSmaller(int n) {
+        for (int i = 0; i < n; i++)
+            this.digits.removeFirst();
     }
 
     private static LargeInteger multi(LargeInteger a, LargeInteger b) {
@@ -421,7 +433,6 @@ public class LargeInteger implements Comparable<LargeInteger> {
      * exception.
      */
     public static LargeInteger[] div(LargeInteger a, LargeInteger b) {
-
         LargeInteger quotient = new LargeInteger(a.base);
         quotient.sign = 1;
         LargeInteger temp_a = a;
@@ -455,14 +466,17 @@ public class LargeInteger implements Comparable<LargeInteger> {
         return r;
     }
 
-//    public static LargeInteger divide(LargeInteger a, LargeInteger b) {
-//        if (b.sign == 0) throw new ArithmeticException("Division by zero");
-//        if (a.sign == 0) return ZERO;
-//        if (b.compareWithoutSign(ONE) == 0) {
-//            LargeInteger r = new LargeInteger(a);
-//            r.sign = a.sign == b.sign ? 1 : -1;
-//            return r;
-//        }
+    public static LargeInteger divide(LargeInteger a, LargeInteger b) {
+        if (b.sign == 0) throw new ArithmeticException("Division by zero");
+        if (a.sign == 0) return ZERO;
+        if (b.compareWithoutSign(ONE) == 0) {
+            LargeInteger r = new LargeInteger(a);
+            r.sign = a.sign == b.sign ? 1 : -1;
+            return r;
+        }
+        LargeInteger [] res = div(a, b);
+        res[0].base = a.base;
+        return res[0];
 //        int i = b.length();
 //        LargeInteger quotient = new LargeInteger(a.base);
 //        LargeInteger part = a.getHighPart(b.length());
@@ -483,14 +497,23 @@ public class LargeInteger implements Comparable<LargeInteger> {
 //                quotient = add(quotient, division[0]);
 //            }
 //        }
-//    }
+    }
 
     /*
      * TODO remainder you get when a is divided by b (a%b). Assume that a is
      * non-negative, and b > 0.
      */
     public static LargeInteger mod(LargeInteger a, LargeInteger b) {
-        return null;
+        if (b.sign == 0) throw new ArithmeticException("Division by zero");
+        if (a.sign == 0) return ZERO;
+        if (b.compareWithoutSign(ONE) == 0) {
+            LargeInteger r = new LargeInteger(a);
+            r.sign = a.sign == b.sign ? 1 : -1;
+            return r;
+        }
+        LargeInteger [] res = div(a, b);
+        res[1].base = a.base;
+        return res[1];
     }
 
     /*
@@ -500,15 +523,55 @@ public class LargeInteger implements Comparable<LargeInteger> {
      * product and add.
      */
     public static LargeInteger power(LargeInteger a, long n) {
-        return null;
+        if (n == 0) {
+            if (a.compareTo(ZERO) == 0) throw new ArithmeticException("Division by zero");
+            return new LargeInteger("1", a.base);
+        }
+        if (n == 1) {
+            return a;
+        }
+        if (n%2 == 0) {
+            return product(power(a, n/2), power(a, n/2));
+        }
+        else {
+            return product(product(power(a, n/2), power(a, n/2)), a);
+        }
     }
 
     /*
      * TODO (L2) Return a^n, where a and n are both XYZ. Here a may be negative,
      * but assume that n is non-negative.
      */
-    public static LargeInteger power(LargeInteger a, LargeInteger n) {
-        return null;
+    private static LargeInteger pow(LargeInteger x, LargeInteger n) {
+        if (n.length() == 1) {
+            return power(x, n.digits.get(0));
+        }
+        else {
+            long a0 = n.digits.get(0);
+            n.shiftToSmaller(1);
+            LargeInteger xToS = power(x, n);
+            long B = (long)MASK + 1;
+            return product(power(xToS, B), power(x, a0));
+        }
+    }
+
+    public static LargeInteger power(LargeInteger x, LargeInteger n) {
+        if (n.compareTo(ZERO) == 0) {
+            if (x.compareTo(ZERO) == 0) throw new ArithmeticException("Division by zero");
+            LargeInteger res = new LargeInteger("1", x.base);
+            return res;
+        }
+        int sign = x.sign;
+        LargeInteger temp = new LargeInteger(n);
+        long firstNum = n.digits.get(0);
+        LargeInteger res = pow(x, temp);
+        if (firstNum%2 == 0) {
+            res.sign = 1;
+        }
+        else {
+            res.sign = sign;
+        }
+        return res;
     }
 
     /*
@@ -516,6 +579,7 @@ public class LargeInteger implements Comparable<LargeInteger> {
      * that a is non-negative.
      */
     public static LargeInteger squareRoot(LargeInteger a) {
+        if (a.sign < 0) throw new ArithmeticException("Negative Number");
         return null;
     }
 
