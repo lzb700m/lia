@@ -243,7 +243,7 @@ public class LargeInteger implements Comparable<LargeInteger> {
     public static Long getRemainder(LargeInteger num, int targetBase) {
         Long temp = 0L;
         LargeInteger tempNum = new LargeInteger(num);
-        int curBase = num.base;
+        long curBase = num.base;
         Iterator<Long> iter = tempNum.digits.descendingIterator();
         num.digits.clear();
         while (iter.hasNext()) {
@@ -290,6 +290,7 @@ public class LargeInteger implements Comparable<LargeInteger> {
      */
     private void convert(int targetBase) {
         LargeInteger temp = new LargeInteger(this);
+        temp.base = DEFAULT_BASE;
         this.digits.clear();
         while (!temp.digits.isEmpty()) {
             Long n = getRemainder(temp, targetBase);
@@ -580,7 +581,38 @@ public class LargeInteger implements Comparable<LargeInteger> {
      */
     public static LargeInteger squareRoot(LargeInteger a) {
         if (a.sign < 0) throw new ArithmeticException("Negative Number");
-        return null;
+        LargeInteger low = new LargeInteger(ONE);
+        LargeInteger high = new LargeInteger(a);
+        while (add(low, ONE).compareTo(high) < 0) {
+            LargeInteger mid = divide(add(low, high), new LargeInteger("2"));
+            LargeInteger p = product(mid, mid);
+            if (a.compareWithoutSign(p) < 0) {
+                high = mid;
+            }
+            else if (a.compareWithoutSign(p) > 0) {
+                low = mid;
+            }
+            else return mid;
+        }
+        return low;
     }
+
+    public static LargeInteger fatorial(LargeInteger a) {
+        LargeInteger res;
+        if (a.compareWithoutSign(ZERO) == 0 || a.compareWithoutSign(ONE) == 0) {
+            res = new LargeInteger(ONE);
+            res.base = a.base;
+            return res;
+        }
+        LargeInteger i = ONE;
+        res = ONE;
+        while (i.compareWithoutSign(a)<=0) {
+            res = product(i, res);
+            i = add(i, ONE);
+        }
+        res.base = a.base;
+        return res;
+    }
+
 
 }
