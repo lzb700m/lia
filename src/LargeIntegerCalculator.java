@@ -165,19 +165,15 @@ public class LargeIntegerCalculator {
 		String cmd; // actual command content (exclude the line number part)
 
 		Scanner sc = new Scanner(System.in);
-		Scanner innerSc = null; // inner scanner : scan over a line
-		String line = null;
 
-		while (!(line = sc.nextLine()).isEmpty()) {
-			innerSc = new Scanner(line);
-			lineNum = innerSc.nextInt();
-			cmd = innerSc.next();
+		while (sc.hasNext()) {
+			lineNum = sc.nextInt();
+			cmd = sc.next();
 			// add command into calculator instance
 			calc.addCmd(index, lineNum, cmd);
 			index++;
 		}
 
-		innerSc.close();
 		sc.close();
 		calc.execute();
 	}
