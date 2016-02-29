@@ -5,7 +5,7 @@ import java.util.ListIterator;
 /**
  * Immutable class LargeInteger represent arbitrary large integer numbers
  *
- * @author LiP
+ * @author Nan Zhang
  */
 public class LargeInteger implements Comparable<LargeInteger> {
 
@@ -45,7 +45,6 @@ public class LargeInteger implements Comparable<LargeInteger> {
         if (str.length() == 0) {
             return;
         }
-
         // "0" string
         if (str.length() == 1 && str.charAt(0) - '0' == 0) {
             return;
@@ -59,7 +58,7 @@ public class LargeInteger implements Comparable<LargeInteger> {
             str = str.substring(1);
         }
         for (int i = 0; i < str.length(); i++) {
-            // invalid string
+            // invalid string, then considered as ZERO
             if (!Character.isDigit(str.charAt(0))) {
                 this.sign = 0;
                 this.digits = new LinkedList<Long>();
