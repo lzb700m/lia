@@ -9,31 +9,30 @@ import java.util.ListIterator;
  */
 public class LargeInteger implements Comparable<LargeInteger> {
 
-    /*
+    /**
      * Default base of the LargeInteger object if not indicated by application
      */
     private static final int DEFAULT_BASE = 10;
-    /*
+
+    /**
      * Base of the LargeInteger
      */
     private int base;
-    /*
+
+    /**
      * List representation of the LargeInteger, with least significant digits at
      * index 0. Each node is a Long value that is between 0 and (base - 1)
      */
     private LinkedList<Long> digits = new LinkedList<Long>();
-    /*
+
+    /**
      * -1 for negative LargeInteger, 1 for positive LargeInteger, 0 for zero
      * value
      */
     private int sign;
-    /*
-     * Actual effective length of the LargeInteger as represented in digits
-     */
-    private long length;
 
-    /*
-     * TODO Constructor taking String as argument. Constructor for XYZ class;
+    /**
+     * Constructor taking String as argument. Constructor for XYZ class;
      * takes a string s as parameter, that stores a number in decimal, and
      * creates the XYZ object representing that number. The string can have
      * arbitrary length. In Level 1, the string contains only the numerals 0-9,
@@ -75,9 +74,18 @@ public class LargeInteger implements Comparable<LargeInteger> {
         this(str, DEFAULT_BASE);
     }
 
+    /**
+     * This mask used to do the carry when in multiplication or addition.
+     * MASK + 1 is the actul base stored by each node.
+     */
     private static int MASK = 0x7fffffff;
 
-    /* TODO Constructor taking long as argument. Constructor for XYZ class. */
+    /**
+     * Constructor taking long number and base as argument.
+     *
+     * @param num
+     * @param b
+     */
     public LargeInteger(Long num, int b) {
         this.base = b;
         this.sign = num == 0 ? 0 : (num > 0 ? 1 : -1);
@@ -87,12 +95,22 @@ public class LargeInteger implements Comparable<LargeInteger> {
         }
     }
 
+    /**
+     * Constructor taking long number and default base
+     *
+     * @param num
+     */
     public LargeInteger(Long num) {
         this(num, DEFAULT_BASE);
     }
 
-    /*
-     * TODO implement compareTo() function
+    /**
+     * Compare two LargeInteger value with sign
+     *
+     * @param o other LargeInteger instance
+     * @return 1: this > o;
+     * 0: this == o;
+     * -1: this < o
      */
     @Override
     public int compareTo(LargeInteger o) {
@@ -104,6 +122,14 @@ public class LargeInteger implements Comparable<LargeInteger> {
         }
     }
 
+    /**
+     * Only compare two LargeInteger with absolute value
+     *
+     * @param o other LargeInteger instance
+     * @return 1: this > o;
+     * 0: this == o;
+     * -1: this < o
+     */
     private int compareWithoutSign(LargeInteger o) {
         if (this.digits.size() != o.digits.size()) return this.digits.size() - o.digits.size();
         Iterator<Long> iter1 = this.digits.descendingIterator();
@@ -116,8 +142,8 @@ public class LargeInteger implements Comparable<LargeInteger> {
         return 0;
     }
 
-    /*
-     * TODO convert the XYZ class object into its equivalent string (in
+    /**
+     * Convert the XYZ class object into its equivalent string (in
      * decimal). There should be no leading zeroes in the string.
      */
     @Override
@@ -128,9 +154,9 @@ public class LargeInteger implements Comparable<LargeInteger> {
         return res;
     }
 
-    /*
- * TODO Print the base + ":" + elements of the list, separated by spaces.
- */
+    /**
+     * Print the base + ":" + elements of the list, separated by spaces.
+     */
     public void printList() {
         StringBuilder sb = new StringBuilder();
         sb.append(this.base);
@@ -139,13 +165,18 @@ public class LargeInteger implements Comparable<LargeInteger> {
         System.out.println(sb.toString());
     }
 
-
+    /**
+     * Iterator helper method
+     *
+     * @param iter iterator
+     * @return next valid value, otherwise null
+     */
     private static Long getNext(Iterator<Long> iter) {
         return iter.hasNext() ? iter.next() : null;
     }
 
     /**
-     * Basic operation of addition or substraction; if it is minus, ths abs(num1) should
+     * Basic operation of addition or subtraction; if it is minus, ths abs(num1) should
      * always larger than abs(num2)
      *
      * @param num1 Summand or minuend  (number to be added or substracted)
@@ -187,45 +218,63 @@ public class LargeInteger implements Comparable<LargeInteger> {
         return result;
     }
 
+    /**
+     * This method is the wrapper method of addition, this deals with both addition and subtraction by given then flag
+     *
+     * @param num1 first LargeInteger instance
+     * @param num2 second LargeInteger instance
+     * @param flag addition or substraction
+     * @return the new instance of LargeInteger with value = num1 (flag(+/-)) num2
+     */
     private static LargeInteger add(LargeInteger num1, LargeInteger num2, boolean flag) {
         if ((num1.sign == num2.sign) == flag) {
-            // same sign addition or different sign substract
-            // just use add
+            // same sign addition or different sign subtraction
+            // e.g: a + b, (-a) + (-b), a - (-b), (-b) - a
             LargeInteger result = addition(num1, num2, true);
             result.sign = num1.sign;
+            result.base = num1.base;
             return result;
         } else {
-            // substract
+            // different sign addition or same sign subtraction
+            // e.g: a - b, a + (-b), (-a) + b, (-a) - (-b)
             int cmp = num1.compareWithoutSign(num2);
             LargeInteger result;
             if (cmp > 0) {
                 result = addition(num1, num2, false);
                 result.sign = num1.sign;
+                result.base = num1.base;
                 return result;
             } else if (cmp < 0) {
                 // exchange num2 and num1 then sign should be reversed
                 result = addition(num2, num1, false);
                 result.sign = -num2.sign;
+                result.base = num1.base;
                 return result;
             } else {
+                // zero
                 return new LargeInteger(num1.base);
             }
         }
     }
 
 
-    /*
-     * TODO sum of two numbers stored as XYZ.
+    /**
+     * Summation method
+     *
+     * @param num1 summand
+     * @param num2 addend
+     * @return a new instance of LargeInteger with value = num1 + num2
      */
     public static LargeInteger add(LargeInteger num1, LargeInteger num2) {
         return add(num1, num2, true);
     }
 
-    /*
-     * TODO given two XYZ a and b as parameters, representing the numbers n1 and
-     * n2 repectively, returns the XYZ corresponding to n1-n2. If you have
-     * implemented negative numbers, return the actual answer. If not, then if
-     * the result is negative, it returns the XYZ for number 0.
+    /**
+     * Subtraction method
+     *
+     * @param num1 minuend
+     * @param num2 subtrahend
+     * @return a new instance of LargeInteger with value = num1 - num2
      */
     public static LargeInteger subtract(LargeInteger num1, LargeInteger num2) {
         return add(num1, num2, false);
@@ -233,6 +282,8 @@ public class LargeInteger implements Comparable<LargeInteger> {
 
 
     /**
+     * This method is used for converting current base of given LargeInteger in to
+     * target base
      * get remainder for each iteration
      * remainder is no larger than base
      *
@@ -284,9 +335,9 @@ public class LargeInteger implements Comparable<LargeInteger> {
     }
 
     /**
-     * Converting current largeInteger instance into a new LargeInteger instance with given targetBase,
+     * Converting current LargeInteger instance into given targetBase,
      *
-     * @param targetBase
+     * @param targetBase target base to be converted to
      */
     public void convert(int targetBase) {
         LargeInteger temp = new LargeInteger(this);
@@ -301,8 +352,8 @@ public class LargeInteger implements Comparable<LargeInteger> {
     /**
      * Converting input LargeInteger into a new LargeInteger with given base.
      *
-     * @param LargeInteger
-     * @param targetBase
+     * @param LargeInteger origin LargeInteger instance
+     * @param targetBase   target base to be converted to
      * @return a new LargeInteger instance with given LargeInteger and base
      */
     public static LargeInteger convert(LargeInteger LargeInteger, int targetBase) {
@@ -334,9 +385,13 @@ public class LargeInteger implements Comparable<LargeInteger> {
         }
     }
 
-    /*
-    * TODO product of two numbers.
-    */
+    /**
+     * Wrapper method of multiplication, used for handling corner case.
+     *
+     * @param a LargeInteger number
+     * @param b LargeInteger number
+     * @return product of two LargeInteger numbers
+     */
     public static LargeInteger product(LargeInteger a, LargeInteger b) {
         if (a.base != b.base) return null;
         if (a.sign == 0 || b.sign == 0) {
@@ -347,16 +402,13 @@ public class LargeInteger implements Comparable<LargeInteger> {
         return result;
     }
 
-    private void shiftToBigger(int n) {
-        for (int i = 0; i < n; i++)
-            this.digits.addFirst(0L);
-    }
-
-    private void shiftToSmaller(int n) {
-        for (int i = 0; i < n; i++)
-            this.digits.removeFirst();
-    }
-
+    /**
+     * Implementation of multiplication. Using O(n^2) naive method.
+     *
+     * @param a LargeInteger number
+     * @param b LargeInteger number
+     * @return product of two LargeInteger numbers without sign
+     */
     private static LargeInteger multi(LargeInteger a, LargeInteger b) {
         LargeInteger result = new LargeInteger(a.base);
         ListIterator<Long> iter_a = a.digits.listIterator();
@@ -383,6 +435,24 @@ public class LargeInteger implements Comparable<LargeInteger> {
             }
         }
         return result;
+    }
+
+    /**
+     * Append zeros to the least significant bit.
+     * @param n number of zeros to add
+     */
+    private void shiftToBigger(int n) {
+        for (int i = 0; i < n; i++)
+            this.digits.addFirst(0L);
+    }
+
+    /**
+     * Remove digits at the least significant bit.
+     * @param n number of zeros to add
+     */
+    private void shiftToSmaller(int n) {
+        for (int i = 0; i < n; i++)
+            this.digits.removeFirst();
     }
 
     public int length() {
@@ -428,10 +498,40 @@ public class LargeInteger implements Comparable<LargeInteger> {
     public static final LargeInteger ONE = new LargeInteger(1L, 10);
 
     public static final LargeInteger TWO = new LargeInteger(2L, 10);
-    /*
-     * TODO Divide a by b result. Fractional part is discarded (take just the
+
+    /**
+     * Helper method to extract higher part of the LargeInteger digits.
+     *
+     * @param digits number of digits want to extract from most significant bit.
+     *               e.g: 0->1->2->3  getHighPart(2) = 2->3
+     * @return higher part LargeInteger
+     */
+    private LargeInteger getHighPart(int digits) {
+        return getPart(0, digits);
+    }
+
+    /**
+     * Helper method to extract part of the LargeInteger digits from fromHight index to toLow index.
+     *
+     * @param fromHight high is most significant digits, parameter from 0...length
+     * @param toLow     low is least significant digits, from 0...length, should be higher than fromHight
+     * @return new large integer contains the number from high to low.
+     */
+    private LargeInteger getPart(int fromHight, int toLow) {
+        LargeInteger r = new LargeInteger(this.base);
+        r.sign = this.sign;
+        r.digits.addAll(this.digits.subList(this.length() - toLow - 1, this.length() - fromHight));
+        return r;
+    }
+
+    /**
+     * Implementation of division, divide a by b result. Fractional part is discarded (take just the
      * quotient). Both a and b may be positive or negative. If b is 0, raise an
      * exception.
+     *
+     * @param a LargeInteger numerator
+     * @param b LargeInteger denominator
+     * @return LargeInteger array holds quotient and remainders
      */
     private static LargeInteger[] div(LargeInteger a, LargeInteger b) {
         LargeInteger quotient = new LargeInteger(a.base);
@@ -447,26 +547,16 @@ public class LargeInteger implements Comparable<LargeInteger> {
                 temp_b = add(temp_b, temp_b);
             }
         }
-        return new LargeInteger[] {quotient, temp_a};
-    }
-
-    private LargeInteger getHighPart(int digits) {
-        return getPart(0, digits);
+        return new LargeInteger[]{quotient, temp_a};
     }
 
     /**
+     * Wrapper method of div implementation only need quotient part
      *
-     * @param fromHight  high is most significant digits, parameter from 0...length
-     * @param toLow     low is least significant digits, from 0...length, should be higher than fromHight
-     * @return new large integer contains the number from high to low.
+     * @param a LargeInteger number
+     * @param b LargeInteger number
+     * @return quotient part (a / b)
      */
-    private LargeInteger getPart(int fromHight, int toLow) {
-        LargeInteger r = new LargeInteger(this.base);
-        r.sign = this.sign;
-        r.digits.addAll(this.digits.subList(this.length() - toLow - 1 , this.length() - fromHight));
-        return r;
-    }
-
     public static LargeInteger divide(LargeInteger a, LargeInteger b) {
         if (b.sign == 0) throw new ArithmeticException("Division by zero");
         if (a.sign == 0) return ZERO;
@@ -475,34 +565,17 @@ public class LargeInteger implements Comparable<LargeInteger> {
             r.sign = a.sign == b.sign ? 1 : -1;
             return r;
         }
-        LargeInteger [] res = div(a, b);
+        LargeInteger[] res = div(a, b);
         res[0].base = a.base;
         return res[0];
-//        int i = b.length();
-//        LargeInteger quotient = new LargeInteger(a.base);
-//        LargeInteger part = a.getHighPart(b.length());
-//        int curQuo = 0, curRem = 0;
-//        for (; i < a.length(); i += 1) {
-//            int cmp = part.compareWithoutSign(b);
-//            if (cmp == 0) {
-//                curRem = 0;
-//                curQuo *= 10;
-//            }
-//            else if (cmp < 0) {
-//                i += 1;
-//                Long nextNum = a.digits.get(a.length() - i - b.length());
-//                part.digits.add(0, nextNum);
-//            }
-//            else {
-//                LargeInteger [] division = div(part, b);
-//                quotient = add(quotient, division[0]);
-//            }
-//        }
     }
 
-    /*
-     * TODO remainder you get when a is divided by b (a%b). Assume that a is
-     * non-negative, and b > 0.
+    /**
+     * Wrapper method of div implementation only need remainder part
+     *
+     * @param a LargeInteger number
+     * @param b LargeInteger number
+     * @return a % b
      */
     public static LargeInteger mod(LargeInteger a, LargeInteger b) {
         if (b.sign == 0) throw new ArithmeticException("Division by zero");
@@ -512,16 +585,20 @@ public class LargeInteger implements Comparable<LargeInteger> {
             r.sign = a.sign == b.sign ? 1 : -1;
             return r;
         }
-        LargeInteger [] res = div(a, b);
+        LargeInteger[] res = div(a, b);
         res[1].base = a.base;
         return res[1];
     }
 
-    /*
-     * TODO given an XYZ a, representing the number x and n, returns the BigNum
-     * corresponding to x^n (x to the power n). Assume that n is a nonnegative
+    /**
+     * Given an LargeInteger a, representing the number a and n, returns the LargeInteger
+     * corresponding to a^n (a to the power n). Assume that n is a nonnegative
      * number. Use divide-and-conquer to implement power using O(log n) calls to
      * product and add.
+     *
+     * @param a LargeInteger instance
+     * @param n long number, power
+     * @return calculated value represented by new instance of LargeInteger
      */
     public static LargeInteger power(LargeInteger a, long n) {
         if (n == 0) {
@@ -531,31 +608,45 @@ public class LargeInteger implements Comparable<LargeInteger> {
         if (n == 1) {
             return a;
         }
-        if (n%2 == 0) {
-            return product(power(a, n/2), power(a, n/2));
-        }
-        else {
-            return product(product(power(a, n/2), power(a, n/2)), a);
+        if (n % 2 == 0) {
+            return product(power(a, n / 2), power(a, n / 2));
+        } else {
+            return product(product(power(a, n / 2), power(a, n / 2)), a);
         }
     }
 
-    /*
-     * TODO (L2) Return a^n, where a and n are both XYZ. Here a may be negative,
+    /**
+     * (L2) Return a^n, where a and n are both XYZ. Here a may be negative,
      * but assume that n is non-negative.
      */
-    private static LargeInteger pow(LargeInteger x, LargeInteger n) {
+
+    /**
+     * Implementation of LargeInteger to LargeInteger, using shift and recursive.
+     *
+     * @param a LargeInteger number
+     * @param n LargeInteger number power
+     * @return a^n where a and n are both LargeInteger. Here a may be negative,
+     * but assume that n is non-negative.
+     */
+    private static LargeInteger pow(LargeInteger a, LargeInteger n) {
         if (n.length() == 1) {
-            return power(x, n.digits.get(0));
-        }
-        else {
+            return power(a, n.digits.get(0));
+        } else {
             long a0 = n.digits.get(0);
             n.shiftToSmaller(1);
-            LargeInteger xToS = power(x, n);
-            long B = (long)MASK + 1;
-            return product(power(xToS, B), power(x, a0));
+            LargeInteger xToS = power(a, n);
+            long B = (long) MASK + 1;
+            return product(power(xToS, B), power(a, a0));
         }
     }
 
+    /**
+     * Wrapper method of power method, to determine the sign and throw exception, handle corner case.
+     *
+     * @param x LargeInteger number
+     * @param n LargeInteger number, power
+     * @return a^n where a and n are both LargeInteger, if 0^0 throw exception.
+     */
     public static LargeInteger power(LargeInteger x, LargeInteger n) {
         if (n.compareTo(ZERO) == 0) {
             if (x.compareTo(ZERO) == 0) throw new ArithmeticException("Division by zero");
@@ -566,18 +657,19 @@ public class LargeInteger implements Comparable<LargeInteger> {
         LargeInteger temp = new LargeInteger(n);
         long firstNum = n.digits.get(0);
         LargeInteger res = pow(x, temp);
-        if (firstNum%2 == 0) {
+        if (firstNum % 2 == 0) {
             res.sign = 1;
-        }
-        else {
+        } else {
             res.sign = sign;
         }
         return res;
     }
 
-    /*
-     * TODO return the square root of a (truncated). Use binary search. Assume
-     * that a is non-negative.
+    /**
+     * Calculate the integer part of square root, using binary search.
+     *
+     * @param a LargeInteger number
+     * @return the square root of a (truncated). Use binary search.
      */
     public static LargeInteger squareRoot(LargeInteger a) {
         if (a.sign < 0) throw new ArithmeticException("Negative Number");
@@ -588,16 +680,21 @@ public class LargeInteger implements Comparable<LargeInteger> {
             LargeInteger p = product(mid, mid);
             if (a.compareWithoutSign(p) < 0) {
                 high = mid;
-            }
-            else if (a.compareWithoutSign(p) > 0) {
+            } else if (a.compareWithoutSign(p) > 0) {
                 low = mid;
-            }
-            else return mid;
+            } else return mid;
         }
         return low;
     }
 
-    public static LargeInteger fatorial(LargeInteger a) {
+
+    /**
+     * Implementation of factorial method (a!) using iteration.
+     *
+     * @param a LargeInteger number
+     * @return LargeInteger
+     */
+    public static LargeInteger factorial(LargeInteger a) {
         LargeInteger res;
         if (a.compareWithoutSign(ZERO) == 0 || a.compareWithoutSign(ONE) == 0) {
             res = new LargeInteger(ONE);
@@ -606,7 +703,7 @@ public class LargeInteger implements Comparable<LargeInteger> {
         }
         LargeInteger i = ONE;
         res = ONE;
-        while (i.compareWithoutSign(a)<=0) {
+        while (i.compareWithoutSign(a) <= 0) {
             res = product(i, res);
             i = add(i, ONE);
         }
